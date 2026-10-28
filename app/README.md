@@ -16,18 +16,32 @@ binary (no source transfer, board-side `gcc` not involved):
 make push run
 ```
 
-This requires an ARM cross toolchain; `CROSS` defaults to the
-`arm-none-linux-gnueabihf-` prefix (expected on PATH) and can be overridden:
+Transfers use **rsync when available** (incremental - unchanged files are
+not re-sent), falling back to `scp` otherwise. Requirements:
+
+- board has rsync (3.5.0, preinstalled) and a clean non-interactive ssh
+  stdout (the login banner had to be disabled once in `/etc/pam.d/sshd`,
+  see root README);
+- host: from an MSYS environment plain `rsync`/`ssh` work as-is. From
+  PowerShell, msys rsync cannot use Windows OpenSSH as transport - either
+  work inside MSYS or point the transport at msys ssh:
+
+```
+make push run RSYNC_SSH="C:/msys64/usr/bin/ssh.exe -F C:/Users/<you>/.ssh/config"
+```
+
+`CROSS` defaults to the `arm-none-linux-gnueabihf-` prefix (expected on
+PATH) and can be overridden:
 
 ```
 make push run CROSS=/path/to/toolchain/bin/arm-none-linux-gnueabihf-
 ```
 
-Full source deploy (project sources scp'd to the board, built on-board with
-gcc):
+Full source deploy (project sources transferred to the board, built
+on-board with gcc):
 
 ```
-make deploy        # scp sources to pocket:~/<project>
+make deploy        # rsync/scp sources to pocket:~/<project>
 make build-remote  # make on the board
 make run
 ```

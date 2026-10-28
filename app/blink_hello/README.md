@@ -34,10 +34,11 @@ bye
 
 ## Build and run
 
-Fast development loop (cross-build here, push only the binary):
+Fast development loop (cross-build here, push only the binary, rsync
+incremental transfer):
 
 ```
-make push run      # build on the host with an ARM cross gcc, scp binary, run
+make push run      # build on the host with an ARM cross gcc, push, run
 ```
 
 `CROSS` defaults to `arm-none-linux-gnueabihf-` (prefix expected on PATH);

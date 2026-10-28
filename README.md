@@ -26,11 +26,18 @@ ssh pocket          # shell
 scp file pocket:~/  # deploy
 ```
 
-Default user is `debian` with passwordless sudo for some commands only
-(LED sysfs works without sudo: the `debian` user is in the `gpio` group).
+Default user is `debian` (sudo password is the image default, `temppwd`).
 The board has **no internet access** by default (no default route) - `apt`
 requires sharing the host's connection first, see
 `docs/board_usb_network_share_guide.md`.
+
+Board tweaks done for this repo (re-apply after re-imaging):
+
+- `/etc/pam.d/sshd`: both `pam_motd.so` lines commented out (original kept
+  as `/etc/pam.d/sshd.bak`). The login banner printed on stdout of
+  non-interactive ssh sessions and broke rsync-over-ssh (protocol
+  handshake). With it disabled, `ssh pocket <cmd>` output stays clean and
+  rsync transfers work.
 
 ## Toolchains (all verified end-to-end)
 
