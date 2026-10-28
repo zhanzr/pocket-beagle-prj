@@ -5,23 +5,36 @@ self-contained project with its own `Makefile` and `README.md`.
 
 | Project | Description |
 |---|---|
-| `blink_hello/` | Hello world + USR3 LED blinker |
+| `blink_hello/` | Hello world + USR3 LED blinker + ADC/temperature sampling |
 
 ## Common workflow (per project, from the project directory)
 
+Fast loop during development - cross-build on the host and push only the
+binary (no source transfer, board-side `gcc` not involved):
+
+```
+make push run
+```
+
+This requires an ARM cross toolchain; `CROSS` defaults to the
+`arm-none-linux-gnueabihf-` prefix (expected on PATH) and can be overridden:
+
+```
+make push run CROSS=/path/to/toolchain/bin/arm-none-linux-gnueabihf-
+```
+
+Full source deploy (project sources scp'd to the board, built on-board with
+gcc):
+
 ```
 make deploy        # scp sources to pocket:~/<project>
-make build-remote  # gcc on the board
-make run           # run on the board via ssh
+make build-remote  # make on the board
+make run
 ```
 
-Deploy target names default to `BOARD=pocket`, `BOARD_DIR=<project>`
-(board-side path under the home directory); override with
-`make deploy BOARD=pocket BOARD_DIR=whatever`.
+Board-side paths default to `BOARD=pocket`, `BOARD_DIR=<project>` (under the
+home directory); override with `make ... BOARD=pocket BOARD_DIR=whatever`.
 
-Cross build from Windows is available where the Makefile provides a `cross`
-target (uses `D:\arm-none-linux-gnu-15.3.rel2` toolchain, flags
-`-march=armv7-a -mfpu=neon -mfloat-abi=hard`).
-
-See the repository root `README.md` for toolchain details, the board
-connection, and PRU notes.
+Cross flags: `-march=armv7-a -mfpu=neon -mfloat-abi=hard`. See the
+repository root `README.md` for toolchain details, the board connection, and
+PRU notes.

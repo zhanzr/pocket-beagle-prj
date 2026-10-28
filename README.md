@@ -5,9 +5,6 @@ Development repository for the PocketBeagle (AM3358, SiP OSD3358-SM) board.
 Board OS: BeagleBoard.org Debian 13 (trixie) Base Image, kernel
 `6.18.55-bone57`, booted from eMMC (28 GB root, ~26 GB free, 481 MB RAM).
 
-Reference manuals (datasheets, TRMs, PRU PDFs) live separately in
-`D:\main-ti-db\PocketBeagle` (manual editing folder, not a repo).
-
 ![PocketBeagle board and header pinout](board_images/connectors_0.png)
 
 ## Board connection (verified working)
@@ -42,7 +39,7 @@ requires sharing the host's connection first, see
 | Where | Tool | Notes |
 |---|---|---|
 | On board | `gcc` 14.2 (Debian, arm-linux-gnueabihf) | `make`, `python3` 3.13, `git` also installed |
-| Windows host | `D:\arm-none-linux-gnu-15.3.rel2\bin\arm-none-linux-gnueabihf-gcc.exe` 15.3.1 | cross, deploy via scp |
+| Host | Arm GNU Toolchain 15.3.Rel2 (`arm-none-linux-gnueabihf`) or any arm-linux-gnueabihf gcc | cross, deploy via scp |
 
 Native build on the board:
 
@@ -50,27 +47,24 @@ Native build on the board:
 gcc -O2 -march=armv7-a -mfpu=neon -mfloat-abi=hard app.c -o app
 ```
 
-Cross build on Windows (board glibc is Debian 13 / 2.41; if the binary fails
+Cross build on the host (board glibc is Debian 13 / 2.41; if the binary fails
 on board due to newer glibc symbols, build natively on board or use
 `-static`):
 
 ```
-D:\arm-none-linux-gnu-15.3.rel2\bin\arm-none-linux-gnueabihf-gcc.exe ^
-  -O2 -march=armv7-a -mfpu=neon -mfloat-abi=hard app.c -o app
+arm-none-linux-gnueabihf-gcc -O2 -march=armv7-a -mfpu=neon -mfloat-abi=hard app.c -o app
 scp app pocket:~/
 ```
+
+The per-project `push` target automates cross-build + binary-only deploy
+(fast development loop); see `app/README.md`.
 
 ### PRU firmware (TI PRU Code Generation Tools 2.3.3)
 
 Already installed on the board as Debian package `ti-pru-cgt-v2.3`
 (`/usr/bin/clpru`, `/usr/share/ti/cgt-pru`); full set: `clpru lnkpru hexpru
-asmpru dispru nmpru ofdpru ...`.
-
-Windows host: installer extracted to
-`D:\main-ti-db\PocketBeagle\ti-cgt-pru_2.3.3\` (verified:
-`ti-cgt-pru_2.3.3\bin\clpru.exe` v2.3.3); the
-`ti_cgt_pru_2.3.3_armlinuxa8hf_busybox_installer.sh` variant is redundant
-(same CGT already on board).
+asmpru dispru nmpru ofdpru ...`. Host installers for the same CGT 2.3.3 are
+available from TI (Windows and Linux-arm variants).
 
 Verified build flow for AM335x PRU (little-endian, EABI):
 
@@ -116,6 +110,34 @@ then `echo 1|0 > .../brightness`. On this image both files are `root:gpio`
 mode 664 and `debian` is in the `gpio` group, so no sudo is needed.
 `app/blink_hello` does exactly this for USR3 and restores the previous
 trigger on exit.
+
+## ADC and die temperature (verified)
+
+The AM3358 has a 12-bit, 8-channel ADC (1.8 V reference, VREFP=P1.18 /
+VREFN=P1.17). On this image it is exposed via IIO, readable/writable by the
+`gpio` group (no sudo):
+
+```
+/sys/bus/iio/devices/iio:device0/in_voltage0_raw .. in_voltage7_raw
+/sys/bus/iio/devices/iio:device0/in_voltage_scale   # 0.439453125 mV/LSB
+```
+
+| Channel | Header pin | Channel | Header pin |
+|---|---|---|---|
+| AIN0 | P1.19 | AIN4 | P1.27 |
+| AIN1 | P1.21 | AIN5 | P2.35 |
+| AIN2 | P1.23 | AIN6 | P1.02 |
+| AIN3 | P1.25 | AIN7 | P2.36 |
+
+Unconnected AIN pins float (raw values near mid-scale or rail - normal).
+
+Die temperature: the AM335x silicon contains an on-die temperature sensor
+(TI driver: `ti,am335x-bandgap` at control-module offset 0x444), but this
+image's device tree does **not** enable it - there is no
+`/sys/class/thermal/thermal_zone*`, no hwmon, no `bandgap` DT node. The
+sensor would appear as a thermal zone once a DTB with the bandgap node is
+booted. `app/blink_hello` samples the ADC every blink and auto-detects any
+thermal zone / hwmon temperature as it becomes available.
 
 ## Serial debug
 
@@ -252,5 +274,6 @@ P2.36       A7(1.8)     P2.36 (AIN7)          N13                  ain7
 - PRU Cookbook, running programs & pins:
   <https://docs.beagleboard.org/books/pru-cookbook/03details/details.html>
   (note: assumes the RPROC overlay - this board uses UIO, see above)
-- TI AM335x TRM: `spruh73q.pdf` (manual folder), PRU compiler:
-  `spruhv7c.pdf`, assembly tools: `spruhv6c.pdf`
+- TI AM335x TRM (spruh73), PRU Optimizing C/C++ Compiler guide (spruhv7),
+  PRU Assembly Language Tools guide (spruhv6) - all publicly available from
+  ti.com; board docs at <https://docs.beagleboard.org>
