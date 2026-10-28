@@ -64,7 +64,10 @@ scp app pocket:~/
 ```
 
 The per-project `push` target automates cross-build + binary-only deploy
-(fast development loop); see `app/README.md`.
+(fast development loop); see `app/README.md`. Use the cross toolchain when
+possible: a clean build of `app/coremark` (both ISA variants, LTO) takes
+~2.3 s cross on the host vs ~47 s with the on-board gcc (~20x); the
+resulting binaries benchmark within a few percent of each other.
 
 ### PRU firmware (TI PRU Code Generation Tools 2.3.3)
 
