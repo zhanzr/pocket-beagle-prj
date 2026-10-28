@@ -1,4 +1,4 @@
-/*
+﻿/*
  * SSD1317 "MD066" 0.66" 64x48 mono OLED driver (I2C) for the PocketBeagle.
  * Driver logic ported from the AT32F425 reference (f425-start
  * bare/ssd1317_md066_64x48_iic, itself ported from the Zhongjingyuan vendor
@@ -43,6 +43,8 @@ void oled_delay_ms(long ms)
     ts.tv_nsec = (ms % 1000) * 1000000L;
     while (nanosleep(&ts, &ts) != 0 && errno == EINTR)
     {
+        if (!oled_running)
+            return;
     }
 }
 
@@ -328,18 +330,28 @@ void OLED_Demo(void)
     OLED_ShowString(0, 0, (const unsigned char *)" SSD1317", 16);
     OLED_ShowString(0, 2, (const unsigned char *)" 64x48", 16);
     OLED_ShowString(0, 4, (const unsigned char *)" PB-A8", 16);
+    if (!oled_running)
+        return;
     oled_delay_ms(1000);
 
     /* --- same info page, whole-display inverted --- */
     OLED_Invert(1);
+    if (!oled_running)
+        return;
     oled_delay_ms(1000);
     OLED_Invert(0);
+    if (!oled_running)
+        return;
     oled_delay_ms(500);
 
     /* --- all pixels on / off --- */
     OLED_Fill(0xFF);
+    if (!oled_running)
+        return;
     oled_delay_ms(1000);
     OLED_Fill(0x00);
+    if (!oled_running)
+        return;
     oled_delay_ms(1000);
 
     /* --- 8-px horizontal stripes --- */
@@ -348,6 +360,8 @@ void OLED_Demo(void)
         memset(row, (page & 1) ? 0x00 : 0xFF, sizeof(row));
         OLED_WritePage(page, row);
     }
+    if (!oled_running)
+        return;
     oled_delay_ms(1000);
 
     /* --- 4-px horizontal stripes --- */
@@ -356,6 +370,8 @@ void OLED_Demo(void)
         memset(row, (page & 1) ? 0xF0 : 0x0F, sizeof(row));
         OLED_WritePage(page, row);
     }
+    if (!oled_running)
+        return;
     oled_delay_ms(1000);
 
     /* --- 1-px checkerboard --- */
@@ -367,6 +383,8 @@ void OLED_Demo(void)
     {
         OLED_WritePage(page, row);
     }
+    if (!oled_running)
+        return;
     oled_delay_ms(1000);
 
     /* --- 8-px vertical bars --- */
@@ -378,6 +396,8 @@ void OLED_Demo(void)
     {
         OLED_WritePage(page, row);
     }
+    if (!oled_running)
+        return;
     oled_delay_ms(1000);
 
     /* --- border rectangle (1-px frame) --- */
@@ -395,6 +415,8 @@ void OLED_Demo(void)
         }
         OLED_WritePage(page, row);
     }
+    if (!oled_running)
+        return;
     oled_delay_ms(1000);
 
     /* --- page gradient (fake grey ramp on mono via row bits) --- */
@@ -407,12 +429,14 @@ void OLED_Demo(void)
             OLED_WritePage(page, row);
         }
     }
+    if (!oled_running)
+        return;
     oled_delay_ms(1000);
 
     /* --- animated bar sweep with FPS on the console --- */
     OLED_Clear();
     t0 = now_ms();
-    for (frames = 0; frames < 40; frames++)
+    for (frames = 0; frames < 40 && oled_running; frames++)
     {
         unsigned char start = (frames * 4) % 64;
         memset(row, 0x00, sizeof(row));
@@ -431,6 +455,8 @@ void OLED_Demo(void)
              (unsigned long)(frames * 1000 / dt));
     OLED_ShowString(0, 2, (const unsigned char *)line, 16);
     printf("oled fps: %s\n", line);
+    if (!oled_running)
+        return;
     oled_delay_ms(1000);
 }
 

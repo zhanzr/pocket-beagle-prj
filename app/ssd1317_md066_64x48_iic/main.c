@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "oled.h"
@@ -38,11 +39,13 @@
 #define MAX_SECONDS   30
 
 static volatile sig_atomic_t running = 1;
+volatile sig_atomic_t oled_running = 1;
 
 static void stop_handler(int sig)
 {
     (void)sig;
     running = 0;
+    oled_running = 0;
 }
 
 /* find the GPIO chip+offset whose line name matches name (e.g. "P2.22") */
@@ -162,12 +165,26 @@ int main(void)
            I2C_DEV, OLED_ADDR);
     OLED_Init(res_fd);
 
-    while (running)
     {
-        OLED_Demo();
-        if (!running)
-            break;
-        oled_delay_ms(200);
+        struct timespec ts;
+
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        long start_ms = ts.tv_sec * 1000L + ts.tv_nsec / 1000000L;
+
+        while (running)
+        {
+            OLED_Demo();
+            if (!running)
+                break;
+            clock_gettime(CLOCK_MONOTONIC, &ts);
+            long now_ms = ts.tv_sec * 1000L + ts.tv_nsec / 1000000L;
+            if (now_ms - start_ms > MAX_SECONDS * 1000L)
+            {
+                printf("%d s cap reached\n", MAX_SECONDS);
+                break;
+            }
+            oled_delay_ms(200);
+        }
     }
 
     OLED_Clear();

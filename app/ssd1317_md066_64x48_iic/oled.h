@@ -14,7 +14,12 @@
 #ifndef __OLED_H
 #define __OLED_H
 
+#include <signal.h>
 #include <stdint.h>
+
+/* shared stop flag: cleared by the signal handler in main(), polled by the
+ * driver so Ctrl-C takes effect immediately (mid-demo, mid-sleep) */
+extern volatile sig_atomic_t oled_running;
 
 #define SIZE 8
 #define XLevelL   0x00
