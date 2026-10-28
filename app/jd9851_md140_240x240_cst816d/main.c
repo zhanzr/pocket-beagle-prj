@@ -15,6 +15,7 @@
   process restarts.
 */
 
+#include <dirent.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdio.h>
@@ -22,14 +23,25 @@
 #include <time.h>
 #include <unistd.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #include "lcd.h"
+#include "font_stb.h"
 #include "touch.h"
 
 #define SCREEN_W   LCD_Width     /* 240 (row buffer sizing) */
 #define FPS_BAND   20            /* bottom rows reserved for the FPS text   */
 #define BACK_COLOR LCD_BLACK
-#define INFO_DY    13            /* info page line pitch                   */
-#define MAX_SECONDS 60           /* demo cap                               */
+#define INFO_DY    26            /* info page line pitch (stb font, 18 px)  */
+#define MAX_SECONDS 90           /* demo cap                               */
+
+/* candidate system fonts, first existing one wins */
+static const char *const g_font_paths[] =
+{
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+};
 
 volatile sig_atomic_t lcd_running = 1;
 static volatile sig_atomic_t running = 1;
@@ -273,25 +285,55 @@ static void info_demo(uint32_t ms, uint8_t invert)
     LCD_SetBackColor(bg);
     g_fps_color = fg;                     /* FPS glyph matches the page */
 
-    const int ix = 2;
-    int y = 2;
+    const int ix = 4;
+    int y = 4;
+    int use_stb = font_stb_ready();
+    uint16_t fg565 = (uint16_t)(((fg >> 8) & 0xF800) |
+                                ((fg >> 5) & 0x07E0) | ((fg >> 3) & 0x1F));
+    uint16_t bg565 = (uint16_t)(((bg >> 8) & 0xF800) |
+                                ((bg >> 5) & 0x07E0) | ((bg >> 3) & 0x1F));
+
     snprintf(buf, sizeof buf, "%s", comp);
-    LCD_DisplayString(ix, (uint16_t)y, buf);  y += INFO_DY;
+    if (use_stb)
+    {
+        font_stb_draw(ix, y, buf, 18, fg565, bg565, 0);
+        y += INFO_DY;
+        snprintf(buf, sizeof buf, "Build %s", __DATE__);
+        font_stb_draw(ix, y, buf, 18, fg565, bg565, 0);
+        y += INFO_DY;
+        snprintf(buf, sizeof buf, "HW SPI0 %s", mhz_text(lcd_kHz()));
+        font_stb_draw(ix, y, buf, 18, fg565, bg565, 0);
+        y += INFO_DY;
+        snprintf(buf, sizeof buf, "SCK=P1.08 SD=P1.12");
+        font_stb_draw(ix, y, buf, 18, fg565, bg565, 0);
+        y += INFO_DY;
+        snprintf(buf, sizeof buf, "CS=P1.06 DC=P2.22");
+        font_stb_draw(ix, y, buf, 18, fg565, bg565, 0);
+        y += INFO_DY;
+        snprintf(buf, sizeof buf, "TOUCH P1.28/P1.26 @0x15");
+        font_stb_draw(ix, y, buf, 18, fg565, bg565, 0);
+        y += INFO_DY;
+    }
+    else
+    {
+        snprintf(buf, sizeof buf, "%s", comp);
+        LCD_DisplayString(ix, (uint16_t)y, buf);  y += INFO_DY / 2;
 
-    snprintf(buf, sizeof buf, "Build %s", __DATE__);
-    LCD_DisplayString(ix, (uint16_t)y, buf);  y += INFO_DY;
+        snprintf(buf, sizeof buf, "Build %s", __DATE__);
+        LCD_DisplayString(ix, (uint16_t)y, buf);  y += INFO_DY / 2;
 
-    snprintf(buf, sizeof buf, "HW SPI0 %s", mhz_text(lcd_kHz()));
-    LCD_DisplayString(ix, (uint16_t)y, buf);  y += INFO_DY;
+        snprintf(buf, sizeof buf, "HW SPI0 %s", mhz_text(lcd_kHz()));
+        LCD_DisplayString(ix, (uint16_t)y, buf);  y += INFO_DY / 2;
 
-    snprintf(buf, sizeof buf, "SCK=P1.08 SD=P1.12");
-    LCD_DisplayString(ix, (uint16_t)y, buf);  y += INFO_DY;
+        snprintf(buf, sizeof buf, "SCK=P1.08 SD=P1.12");
+        LCD_DisplayString(ix, (uint16_t)y, buf);  y += INFO_DY / 2;
 
-    snprintf(buf, sizeof buf, "CS=P1.06 DC=P2.22");
-    LCD_DisplayString(ix, (uint16_t)y, buf);  y += INFO_DY;
+        snprintf(buf, sizeof buf, "CS=P1.06 DC=P2.22");
+        LCD_DisplayString(ix, (uint16_t)y, buf);  y += INFO_DY / 2;
 
-    snprintf(buf, sizeof buf, "TOUCH P1.28/P1.26");
-    LCD_DisplayString(ix, (uint16_t)y, buf);  y += INFO_DY;
+        snprintf(buf, sizeof buf, "TOUCH P1.28/P1.26 @0x15");
+        LCD_DisplayString(ix, (uint16_t)y, buf);  y += INFO_DY / 2;
+    }
 
     /* Solid-color fill durations, measured earlier in this pass (the
      * TEST_STAND solids run before the info pages) - so they always
@@ -300,7 +342,16 @@ static void info_demo(uint32_t ms, uint8_t invert)
     {
         snprintf(buf, sizeof buf, "%-5s : %4lu ms",
                  g_solid_name[i], (unsigned long)g_solid_ms[i]);
-        LCD_DisplayString(ix, (uint16_t)y, buf);  y += INFO_DY;
+        if (use_stb)
+        {
+            font_stb_draw(ix, y, buf, 18, fg565, bg565, 0);
+            y += INFO_DY;
+        }
+        else
+        {
+            LCD_DisplayString(ix, (uint16_t)y, buf);
+            y += INFO_DY / 2;
+        }
     }
 
     g_fps_color = LCD_WHITE;              /* restore default FPS glyph color */
@@ -321,7 +372,6 @@ static void banner_page(const char *l1, const char *l2,
 {
     g_fps_color = fg;
 
-    LCD_SetAsciiFont(&ASCII_Font16);      /* bigger than the normal 6x12  */
     LCD_SetColor(fg);
     LCD_SetBackColor(bg);
     LCD_Clear();
@@ -331,11 +381,26 @@ static void banner_page(const char *l1, const char *l2,
     LCD_SetColor(fg);
     LCD_SetBackColor(bg);
 
-    /* 16x32 glyphs (8x16 scaled 2x): center each line dynamically. */
-    LCD_DisplayStringBig((uint16_t)((LCD_W() - (int)strlen(l1) * 16) / 2),
-                         36, (char *)l1, 2);
-    LCD_DisplayStringBig((uint16_t)((LCD_W() - (int)strlen(l2) * 16) / 2),
-                         84, (char *)l2, 2);
+    if (font_stb_ready())
+    {
+        /* DejaVu: 40 px title, 26 px subtitle, centered */
+        uint16_t fg565 = (uint16_t)(((fg >> 8) & 0xF800) |
+                                    ((fg >> 5) & 0x07E0) | ((fg >> 3) & 0x1F));
+        font_stb_draw((240 - font_stb_string_width(l1, 40)) / 2, 46, l1,
+                      40, fg565, 0x0000, 0);
+        font_stb_draw((240 - font_stb_string_width(l2, 26)) / 2, 110, l2,
+                      26, 0xFFFF, 0x0000, 0);
+    }
+    else
+    {
+        /* fallback: built-in 8x16 font scaled 2x */
+        LCD_SetAsciiFont(&ASCII_Font16);
+        LCD_DisplayStringBig((uint16_t)((LCD_W() - (int)strlen(l1) * 16) / 2),
+                             36, (char *)l1, 2);
+        LCD_DisplayStringBig((uint16_t)((LCD_W() - (int)strlen(l2) * 16) / 2),
+                             84, (char *)l2, 2);
+        LCD_SetAsciiFont(&ASCII_Font12);
+    }
 
     unsigned long start = tick_ms();
     do
@@ -345,8 +410,109 @@ static void banner_page(const char *l1, const char *l2,
         lcd_delay_ms(50);
     } while (lcd_running && tick_ms() - start < ms);
 
-    LCD_SetAsciiFont(&ASCII_Font12);      /* back to the normal font      */
     g_fps_color = LCD_WHITE;
+}
+
+/* --------------------------------------------------------------------- */
+/* Image test: loads a PNG (repo logo first, then any system icon),
+ * scales it to fit the 240x240 panel and centers it on black.           */
+static void image_demo(uint32_t ms)
+{
+    int w = 0, h = 0, n = 0;
+    unsigned char *img = NULL;
+    const char *used = NULL;
+
+    img = stbi_load("logo_240.png", &w, &h, &n, 3);
+    if (img != NULL)
+    {
+        used = "logo_240.png";
+    }
+    else
+    {
+        static const char *const icon_dirs[] =
+        {
+            "/usr/share/icons/hicolor/256x256/apps",
+            "/usr/share/icons/hicolor/128x128/apps",
+            "/usr/share/icons/hicolor/48x48/apps",
+        };
+        DIR *d;
+        for (int i = 0; i < 3 && img == NULL; i++)
+        {
+            d = opendir(icon_dirs[i]);
+            if (d == NULL)
+                continue;
+            struct dirent *e;
+            while ((e = readdir(d)) != NULL)
+            {
+                size_t len = strlen(e->d_name);
+                if (len > 4 && strcmp(e->d_name + len - 4, ".png") == 0)
+                {
+                    char path[256];
+                    snprintf(path, sizeof path, "%s/%s", icon_dirs[i],
+                             e->d_name);
+                    img = stbi_load(path, &w, &h, &n, 3);
+                    if (img != NULL)
+                    {
+                        used = path;
+                        break;
+                    }
+                }
+            }
+            closedir(d);
+        }
+    }
+
+    LCD_SetColor(LCD_BLACK);
+    LCD_SetBackColor(LCD_BLACK);
+    LCD_Clear();
+
+    if (img == NULL)
+    {
+        printf("[IMG] no image found\r\n");
+        LCD_SetColor(LCD_WHITE);
+        LCD_DisplayString(2, 100, "no image file");
+        StopDelay((uint16_t)ms);
+        return;
+    }
+
+    /* fit inside 240x240 (aspect preserved), centered */
+    int tw = LCD_Width, th = LCD_Height;
+    if (w > h)
+    {
+        th = h * LCD_Width / w;
+    }
+    else
+    {
+        tw = w * LCD_Height / h;
+    }
+    int ox = (LCD_Width - tw) / 2;
+    int oy = (LCD_Height - th) / 2;
+    printf("[IMG] %s %dx%d -> %dx%d at (%d,%d)\r\n",
+           used, w, h, tw, th, ox, oy);
+
+    static uint16_t row[SCREEN_W];
+    for (int y = 0; y < th && lcd_running; y++)
+    {
+        int sy = y * h / th;
+        for (int x = 0; x < tw; x++)
+        {
+            int sx = x * w / tw;
+            const unsigned char *px = &img[(sy * w + sx) * 3];
+            row[x] = (uint16_t)(((px[0] & 0xF8) << 8) |
+                                ((px[1] & 0xFC) << 3) | (px[2] >> 3));
+        }
+        LCD_CopyBuffer((uint16_t)ox, (uint16_t)(oy + y), (uint16_t)tw, 1,
+                       row);
+    }
+    stbi_image_free(img);
+
+    unsigned long start = tick_ms();
+    do
+    {
+        fps_update();
+        touch_task();
+        lcd_delay_ms(50);
+    } while (lcd_running && tick_ms() - start < ms);
 }
 
 /* --------------------------------------------------------------------- */
@@ -370,6 +536,10 @@ static void run_patterns(void)
     if (!lcd_running) return;
     printf("[LCD] phase: gradient\r\n");
     gradient_demo(4000);
+
+    if (!lcd_running) return;
+    printf("[LCD] phase: image\r\n");
+    image_demo(6000);
 }
 
 /* --------------------------------------------------------------------- */
@@ -382,6 +552,18 @@ int main(void)
     printf("JD9851 1.4\" 240x240 (DC-based 4-wire SPI, MADCTL 0x00):\r\n");
     printf("SCK=P1.08 MOSI=P1.12 CS=P1.06 DC=P2.22 (spidev0.0)\r\n");
     printf("TOUCH: CST816D I2C2 SCL=P1.28 SDA=P1.26\r\n");
+
+    for (unsigned i = 0; i < sizeof g_font_paths / sizeof g_font_paths[0];
+         i++)
+    {
+        if (font_stb_init(g_font_paths[i]) == 0)
+            break;
+    }
+    if (!font_stb_ready())
+    {
+        printf("[FONT] no system font found - falling back to the built-in "
+               "bitmap font\r\n");
+    }
 
     if (Touch_Init() != 0)
     {
