@@ -35,6 +35,10 @@ Board tweaks done for this repo (re-apply after re-imaging):
 
 - `/boot/uEnv.txt`: `uboot_overlay_addr0=BB-SPIDEV0-00A0.dtbo` appended ->
   SPI0 pins (P1.06/P1.08/P1.10/P1.12) become `/dev/spidev0.0`/`0.1`.
+- `/etc/udev/rules.d/99-spidev.rules`:
+  `KERNEL=="spidev*", MODE="0660", GROUP="gpio"` -> the spidev devices
+  (root-only 0600 by default) become accessible to the `debian` user
+  (member of `gpio`) without sudo.
 - `/etc/pam.d/sshd`: both `pam_motd.so` lines commented out (original kept
   as `/etc/pam.d/sshd.bak`). The login banner printed on stdout of
   non-interactive ssh sessions and broke rsync-over-ssh (protocol
