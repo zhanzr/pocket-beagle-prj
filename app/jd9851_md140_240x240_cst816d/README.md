@@ -44,9 +44,17 @@ inverted, shows measured fill times) -> animated HSV gradient. Touch
 down/release + X/Y print on the console; touch can be tested any time the
 info/banner pages are up.
 
-Measured: full-frame solid fill ~94 ms at 16 MHz (~10 fps; the spidev
-`bufsiz` limit of 4096 B caps one transfer - writes are chunked
-accordingly; raising `spidev.bufsiz` boots would allow bigger bursts).
+Measured (16 MHz -> 32 MHz): full-frame solid fill 94 ms -> ~73 ms
+(~13 fps). The bottleneck is the AM335x spidev PIO path, not the SPI
+clock; raising `spidev` `bufsiz` at module load (modprobe spidev
+bufsiz=32768) does not change the numbers. If the wire misbehaves at
+32 MHz (artifacts), drop `SPI_SPEED_HZ` in lcd.c to 16000000.
+
+Text: the built-in 8x16 font can be rendered at integer scale (1..4) via
+`LCD_DisplayStringBig()` - the banner uses 16x32 glyphs. Real system-font
+rendering (e.g. DejaVu via stb_truetype) is feasible once the board has
+fonts installed (currently none in this minimal image; needs internet for
+`apt install fonts-dejavu-core`).
 
 ## Build and run
 

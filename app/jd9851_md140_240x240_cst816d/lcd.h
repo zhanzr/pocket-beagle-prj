@@ -98,6 +98,8 @@ void LCD_SetAsciiFont(pFONT *font);
 void LCD_ShowTransparent(uint8_t mode);
 void LCD_DisplayChar(uint16_t x, uint16_t y, uint8_t c);
 void LCD_DisplayString(uint16_t x, uint16_t y, char *p);
+/* 8x16 font rendered at an integer scale (1..4), opaque background */
+void LCD_DisplayStringBig(uint16_t x, uint16_t y, char *p, uint8_t scale);
 
 /* ---- API: 2D drawing ---- */
 void LCD_DrawPoint(uint16_t x, uint16_t y, uint32_t color);

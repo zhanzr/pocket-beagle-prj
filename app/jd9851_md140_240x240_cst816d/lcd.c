@@ -1,4 +1,4 @@
-/*
+﻿/*
   lcd.c - JD9851 1.4" 240x240 LCD driver for the PocketBeagle (MD140
   module). Driver logic ported verbatim from the nano-f411 reference
   (f4-demo/nano-f411/app/jd9851_md140_240x240_cst816d, vendor-verbatim
@@ -30,7 +30,8 @@
 #include "lcd.h"
 
 #define SPI_DEV        "/dev/spidev0.0"
-#define SPI_SPEED_HZ   16000000U   /* safe start; module also works faster */
+#define SPI_SPEED_HZ   32000000U   /* AM335x MCSPI goes to 48 MHz; back off
+                                      to 16 MHz if the wire misbehaves */
 #define DC_LINE_NAME   "P2.22"
 /* spidev rejects transfers larger than its 'bufsiz' (default 4096) with
  * EMSGSIZE - keep chunks within that limit */
@@ -751,6 +752,50 @@ void LCD_DisplayString(uint16_t x, uint16_t y, char *p)
     {
         LCD_DisplayChar(x, y, (uint8_t)*p);
         x += (uint16_t)((s_AsciiFont != NULL) ? s_AsciiFont->Width : 6);
+        p++;
+    }
+}
+
+/* One 8x16 glyph rendered at an integer scale into a static buffer, then
+ * blitted in one window write. Scale 4 max: 32x64 px = 4 KB of RGB565. */
+void LCD_DisplayCharBig(uint16_t x, uint16_t y, uint8_t c, uint8_t scale)
+{
+    static uint16_t Buff[32 * 64];
+    uint8_t disChar;
+
+    if (c < 0x20U || c > 0x7EU)
+    {
+        return;
+    }
+    c -= 0x20U;   /* table starts at space */
+
+    for (uint16_t row = 0; row < 16; row++)
+    {
+        disChar = asc2_1608[(uint16_t)c * 16U + row];
+        for (uint16_t col = 0; col < 8; col++)
+        {
+            uint16_t color = (disChar & (uint8_t)(1U << (col % 8)))
+                             ? s_Color : s_BackColor;
+            for (uint16_t sy = 0; sy < scale; sy++)
+            {
+                uint16_t *dst = &Buff[(row * scale + sy) * 8U * scale];
+                for (uint16_t sx = 0; sx < scale; sx++)
+                {
+                    dst[col * scale + sx] = color;
+                }
+            }
+        }
+    }
+    LCD_CopyBuffer(x, y, (uint16_t)(8U * scale), (uint16_t)(16U * scale),
+                   Buff);
+}
+
+void LCD_DisplayStringBig(uint16_t x, uint16_t y, char *p, uint8_t scale)
+{
+    while (x < COL && *p != '\0')
+    {
+        LCD_DisplayCharBig(x, y, (uint8_t)*p, scale);
+        x += (uint16_t)(8U * scale);
         p++;
     }
 }

@@ -331,11 +331,11 @@ static void banner_page(const char *l1, const char *l2,
     LCD_SetColor(fg);
     LCD_SetBackColor(bg);
 
-    /* 8 px/glyph: center each line dynamically. */
-    LCD_DisplayString((uint16_t)((LCD_W() - (int)strlen(l1) * 8) / 2), 40,
-                      (char *)l1);
-    LCD_DisplayString((uint16_t)((LCD_W() - (int)strlen(l2) * 8) / 2), 64,
-                      (char *)l2);
+    /* 16x32 glyphs (8x16 scaled 2x): center each line dynamically. */
+    LCD_DisplayStringBig((uint16_t)((LCD_W() - (int)strlen(l1) * 16) / 2),
+                         36, (char *)l1, 2);
+    LCD_DisplayStringBig((uint16_t)((LCD_W() - (int)strlen(l2) * 16) / 2),
+                         84, (char *)l2, 2);
 
     unsigned long start = tick_ms();
     do
