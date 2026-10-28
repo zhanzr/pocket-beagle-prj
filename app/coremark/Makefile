@@ -4,7 +4,7 @@ BOARD_DIR ?= coremark
 CROSS    ?= arm-none-linux-gnueabihf-
 ITERATIONS ?= 40000
 SOURCES  := core_list_join.c core_main.c core_matrix.c core_state.c \
-            core_util.c linux/core_portme.c
+            core_util.c linux/core_portme.c linux/core_portme.h
 
 FLAGS := -O3 -funroll-loops -flto \
          -mcpu=cortex-a8 -mfpu=neon -mfloat-abi=hard \
@@ -37,11 +37,14 @@ run:
 	ssh $(BOARD) "cd $(BOARD_DIR) && ./coremark-arm && ./coremark-thumb"
 
 deploy:
-	ssh $(BOARD) "mkdir -p $(BOARD_DIR)"
-	$(COPY) $(SOURCES) coremark.h Makefile README.md $(BOARD):$(BOARD_DIR)/
+	ssh $(BOARD) "mkdir -p $(BOARD_DIR)/linux"
+	$(COPY) core_list_join.c core_main.c core_matrix.c core_state.c \
+	        core_util.c coremark.h Makefile README.md $(BOARD):$(BOARD_DIR)/
+	$(COPY) linux/core_portme.c linux/core_portme.h \
+	        $(BOARD):$(BOARD_DIR)/linux/
 
 build-remote:
-	ssh $(BOARD) "cd $(BOARD_DIR) && make"
+	ssh $(BOARD) "cd $(BOARD_DIR) && make CROSS="
 
 size: $(TARGETS)
 	$(CROSS)size $(TARGETS)
