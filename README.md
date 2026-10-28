@@ -33,6 +33,8 @@ requires sharing the host's connection first, see
 
 Board tweaks done for this repo (re-apply after re-imaging):
 
+- `/boot/uEnv.txt`: `uboot_overlay_addr0=BB-SPIDEV0-00A0.dtbo` appended ->
+  SPI0 pins (P1.06/P1.08/P1.10/P1.12) become `/dev/spidev0.0`/`0.1`.
 - `/etc/pam.d/sshd`: both `pam_motd.so` lines commented out (original kept
   as `/etc/pam.d/sshd.bak`). The login banner printed on stdout of
   non-interactive ssh sessions and broke rsync-over-ssh (protocol

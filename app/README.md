@@ -8,6 +8,7 @@ self-contained project with its own `Makefile` and `README.md`.
 | `blink_hello/` | Hello world + USR3 LED blinker + ADC/temperature sampling |
 | `coremark/` | EEMBC CoreMark 1.0, ARM and Thumb-2 variants, ported from the MP157 DK1 reference project |
 | `ssd1317_md066_64x48_iic/` | SSD1317 64x48 I2C OLED demo (i2c-dev + GPIO uAPI, no libs), ported from the MP157/AT32 references |
+| `jd9851_md140_240x240_cst816d/` | JD9851 240x240 SPI TFT + CST816D touch (spidev + i2c-dev + GPIO uAPI), ported from the nano-f411 reference |
 
 ## Common workflow (per project, from the project directory)
 
