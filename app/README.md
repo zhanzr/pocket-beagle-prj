@@ -6,6 +6,7 @@ self-contained project with its own `Makefile` and `README.md`.
 | Project | Description |
 |---|---|
 | `blink_hello/` | Hello world + USR3 LED blinker + ADC/temperature sampling |
+| `coremark/` | EEMBC CoreMark 1.0, ARM and Thumb-2 variants, ported from the MP157 DK1 reference project |
 
 ## Common workflow (per project, from the project directory)
 
