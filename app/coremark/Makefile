@@ -30,6 +30,7 @@ coremark-thumb: $(SOURCES)
 	$(CROSS)gcc $(FLAGS) -mthumb $(SOURCES) -o $@
 
 push: all
+	ssh $(BOARD) "mkdir -p $(BOARD_DIR)"
 	$(COPY) $(TARGETS) $(BOARD):$(BOARD_DIR)/
 	ssh $(BOARD) "chmod 755 $(BOARD_DIR)/$(TARGETS)"
 

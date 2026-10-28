@@ -24,6 +24,7 @@ cross:
 	$(CROSS)gcc $(CROSS_FLAGS) -o $(TARGET) $(TARGET).c
 
 push: cross
+	ssh $(BOARD) "mkdir -p $(BOARD_DIR)"
 	$(COPY) $(TARGET) $(BOARD):$(BOARD_DIR)/
 	ssh $(BOARD) "chmod 755 $(BOARD_DIR)/$(TARGET)"
 
