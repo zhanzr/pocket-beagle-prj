@@ -8,18 +8,7 @@ Board OS: BeagleBoard.org Debian 13 (trixie) Base Image, kernel
 Reference manuals (datasheets, TRMs, PRU PDFs) live separately in
 `D:\main-ti-db\PocketBeagle` (manual editing folder, not a repo).
 
-## Repository layout
-
-| Path | Content |
-|---|---|
-| `app/` | Applications for the board |
-| `app/blink_hello/` | Hello world + USR3 LED blinker (first project) |
-| `docs/` | Setup and design notes |
-| `docs/board_usb_network_share_guide.md` | How to give the board internet (Windows ICS etc.) |
-| `docs/feasibility_to_ignore_pru_cm3.md` | Why Cortex-A8 alone is enough for most projects |
-| `board_images/` | Board photos, header schematics, breadboard diagram |
-
-Every directory level contains its own `README.md`.
+![PocketBeagle board and header pinout](board_images/connectors_0.png)
 
 ## Board connection (verified working)
 
